@@ -1,0 +1,85 @@
+$schema: "http://json-schema.org/draft-06/schema#"
+
+description: snakemake configuration file
+
+type: object
+
+properties:
+  samples:
+    type: string
+  units:
+    type: string
+
+  ref:
+    type: object
+    properties:
+      n_chromosomes:
+        type: integer
+      species:
+        type: string
+      release:
+        type: integer
+      build:
+        type: string
+    required:
+      - species
+      - release
+      - build
+      - n_chromosomes
+
+  trimming:
+    type: object
+    properties:
+      activate:
+        type: boolean
+    required:
+      - activate
+
+  pca:
+    type: object
+    properties:
+      activate:
+       type: boolean
+      labels:
+        type: array
+        items:
+          type: string
+    required:
+      - labels
+      - activate
+
+  diffexp:
+    type: object
+    properties:
+      activate:
+       type: boolean
+      contrasts:
+        type: object
+      model:
+        type: string
+    required:
+      - activate
+      - contrasts
+
+  params:
+    type: object
+    properties:
+      star: 
+        type: string
+      cutadapt:
+        type: string
+      arriba:
+        type: string
+    required:
+      - cutadapt
+      - salmon_index
+      - salmon_quant
+
+required:
+  - samples
+  - units
+  - ref
+  - pca
+  - diffexp
+  - params
+  - trimming

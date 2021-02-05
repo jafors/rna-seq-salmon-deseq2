@@ -1,0 +1,4 @@
+sample_name	unit_name	fq1	fq2	sra	adapters
+A	lane1	A_L001.R1.fastq.gz	A_L001.R2.fastq.gz		
+A	lane1	A_L002.R1.fastq.gz	A_L002.R2.fastq.gz		
+B	lane2	B_L001.R1.fastq.gz	B_L001.R2.fastq.gz		
