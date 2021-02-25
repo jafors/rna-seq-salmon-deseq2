@@ -1,6 +1,6 @@
-#log <- file(snakemake@log[[1]], open="wt")
-#sink(log)
-#sink(log, type="message")
+log <- file(snakemake@log[[1]], open="wt")
+sink(log)
+sink(log, type="message")
 
 print("Start")
 library(tximport)
@@ -59,51 +59,54 @@ while ( class(mart)[[1]] != "Mart" ) {
 
 t2g <- biomaRt::getBM(
             attributes = c( "ensembl_transcript_id",
-                            "ensembl_gene_id",
+                            #"ensembl_gene_id",
                             "external_gene_name"),
             mart = mart,
             ) %>%
         rename( target_id = ensembl_transcript_id,
-                ens_gene = ensembl_gene_id,
+                #ens_gene = ensembl_gene_id,
                 ext_gene = external_gene_name
                 )
 
 
-#t2g <- dplyr::rename(t2g, tx_id = ensembl_transcript_id, symbol = external_gene_name)
+### read sample sheet ###
+sample_file<-read.table(snakemake@params[["samples"]],sep='\t',header=TRUE)
+sample_file <- sample_file[order(sample_file$sample_name),]
+
+### read input files ###
+salmon_files<-snakemake@input[["inpt"]]
+
+sample_names<- as.character(sample_file$sample_name)
 
 
-samplefile<-read.table(snakemake@params[["samples"]],sep='\t',header=TRUE)
-print(samplefile)
-sal_files<-snakemake@input[["inpt"]]
-print(sal_files)
-samples<- as.character(samplefile$sample_name)
-condition<- as.character(samplefile$condition)
-#line<- as.character(samplefile$line)
-batch<- as.character(samplefile$batch)
-print(batch)
 
 ### tximport ###
 print("import")
-names(sal_files)<-paste0(samples)
-txi.salmon_PR<-tximport(sal_files,type="salmon",txOut=F,tx2gene=t2g, ignoreTxVersion=TRUE)
+
+
+names(salmon_files)<-paste0(sample_names)
+
+txi.salmon_PR<-tximport(salmon_files, type="salmon", txOut=F, tx2gene=t2g, ignoreTxVersion=TRUE)
 
 ### prepare sample table ###
-sampleTable_PR<-data.frame(condition=condition, batch=batch)
-rownames(sampleTable_PR)<-colnames(txi.salmon_PR$counts)
-
+print("Prepare Table")
+datafile <- samplefile[ , -which(names(samplefile) %in% c("sample_name"))]
+rownames(datafile) = colnames(txi.salmon_PR$counts)
+sampleTable_PR <- datafile
 
 ### DESeq ###
 
-formula = as.formula("~condition")
+formula = as.formula(snakemake@params[["condition"]])
 
 ### salmon
 sal_ddsTxi_PR<-DESeqDataSetFromTximport(txi.salmon_PR,colData=sampleTable_PR,design= formula)
 sal_ddsTxi_PR<-sal_ddsTxi_PR[rowSums(counts(sal_ddsTxi_PR)) > 1,]
 sal_deseq_PR<-DESeq(sal_ddsTxi_PR)
+print(sal_deseq_PR)
 sal_counts<-counts(sal_deseq_PR, normalized=T)
 raw_counts<-counts(sal_deseq_PR, normalized=F)
-write.table(sal_counts, snakemake@output[[2]],sep='\t')
-write.table(raw_counts, snakemake@output[[3]],sep='\t')
+write.table(data.frame("ID" = rownames(sal_counts), sal_counts), snakemake@output[[2]], sep='\t', row.names=F)
+write.table(data.frame("ID" = rownames(raw_counts), raw_counts), snakemake@output[[3]], sep='\t', row.names=F)
 saveRDS(sal_deseq_PR, snakemake@output[[1]])
 
 

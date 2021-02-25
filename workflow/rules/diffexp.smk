@@ -42,7 +42,7 @@ rule deseq2_init:
         "results/deseq2/normcounts.csv",
         "results/deseq2/rawcounts.csv"
     params:
-        biomart_species=config["ref"]["biomart_species"],
+        species=config["ref"]["biomart_species"],
         condition=config["diffexp"]["model"],
         samples=config["samples"],
     conda:
@@ -75,7 +75,8 @@ rule deseq2:
         table_LRT=report("results/diffexp/{contrast}.LRT.diffexp.tsv", "../report/diffexp_LRT.rst"),
         ma_plot=report("results/diffexp/{contrast}.ma-plot.svg", "../report/ma.rst"),
     params:
-        contrast=lambda wildcards: config["diffexp"]["contrasts"][wildcards.contrast]
+        contrast=lambda wildcards: config["diffexp"]["contrasts"][wildcards.contrast],
+        reduced_model=config["diffexp"]["reduced_model"]
     conda:
         "../envs/deseq2.yaml"
     log:
