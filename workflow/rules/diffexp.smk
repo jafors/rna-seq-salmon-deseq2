@@ -1,6 +1,15 @@
+def get_salmon_quant(wildcards):
+    res = []
+    for unit in units.itertuples():
+        if is_paired_end(unit.sample_name):
+            res.append("results/salmon/{sample}/quant.sf".format(sample=unit.sample_name)) 
+        else:
+            res.append("results/salmon_SE/{sample}/quant.sf".format(sample=unit.sample_name))
+    return res
+
 rule count_matrix:
     input:
-        expand("results/salmon/{unit.sample_name}/quant.sf", unit=units.itertuples())
+        get_salmon_quant
     output:
         "results/counts/all.tsv"
     params:
@@ -11,7 +20,7 @@ rule count_matrix:
 
 rule get_TPM:
     input:
-        inpt=expand("results/salmon/{unit.sample_name}/quant.sf", unit=units.itertuples())
+        inpt=get_salmon_quant
     output:
         "results/TPM/all.tsv"
     params:
@@ -25,10 +34,9 @@ def get_deseq2_threads(wildcards=None):
     few_coeffs = False if wildcards is None else len(get_contrast(wildcards)) < 10
     return 1 if len(samples) < 100 or few_coeffs else 6
 
-
 rule deseq2_init:
     input:
-        inpt=expand("results/salmon/{unit.sample_name}/quant.sf", unit=units.itertuples())
+        inpt=get_salmon_quant
     output:
         "results/deseq2/init.rds",
         "results/deseq2/normcounts.csv",
@@ -45,7 +53,6 @@ rule deseq2_init:
     script:
         "../scripts/deseq2_init.R"
 
-
 rule pca:
     input:
         "results/deseq2/init.rds"
@@ -60,12 +67,12 @@ rule pca:
     script:
         "../scripts/plot-pca.R"
 
-
 rule deseq2:
     input:
         "results/deseq2/init.rds"
     output:
         table=report("results/diffexp/{contrast}.diffexp.tsv", "../report/diffexp.rst"),
+        table_LRT=report("results/diffexp/{contrast}.LRT.diffexp.tsv", "../report/diffexp_LRT.rst"),
         ma_plot=report("results/diffexp/{contrast}.ma-plot.svg", "../report/ma.rst"),
     params:
         contrast=lambda wildcards: config["diffexp"]["contrasts"][wildcards.contrast]
